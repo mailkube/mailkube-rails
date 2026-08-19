@@ -13,10 +13,10 @@ jobs:
   conventional-title:
     # The job-level `name:` is load-bearing, not cosmetic. A required status check is matched on
     # the JOB name, and with no `name:` here GitHub reports the job *id* — `conventional-title`.
-    # The setup docs (Makefile, README) tell maintainers to require a check called `PR-title`, so
-    # without this line that ruleset waits forever on a check that is never reported and every PR
-    # is permanently blocked. Renaming the job id instead would not work: `-` is fine in an id, but
-    # the docs and the id would still have to be kept in step by hand.
+    # CONTRIBUTING.md tells maintainers to require a check called `PR-title`, so without this line
+    # that ruleset waits forever on a check that is never reported and every PR is permanently
+    # blocked. Renaming the job id instead would not work: `-` is fine in an id, but the docs and
+    # the id would still have to be kept in step by hand.
     name: PR-title
     runs-on: ubuntu-latest
     steps:
