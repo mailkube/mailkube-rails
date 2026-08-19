@@ -1,0 +1,72 @@
+name: Release
+
+# Conventional-Commits-driven release: one tag + one GitHub Release, then a push to RubyGems
+# over OIDC trusted publishing. No long-lived API key is stored anywhere.
+#
+# NOTHING is committed back to `main`. See .rules/RELEASE.md.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci-gate:
+    # Release only proceeds if the full gated CI (test + dry + docs) is green.
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: ci-gate
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      # A job-level `permissions:` block REPLACES the default token scopes rather than adding
+      # to them, so every scope semantic-release needs must be listed here.
+      # `@semantic-release/github` comments on the issues and PRs a release resolves and labels
+      # them `released`; without `issues`/`pull-requests` that call 403s and turns the run red
+      # AFTER the tag and the GitHub Release have already been created. See .rules/CI_GATES.md.
+      contents: write # push the tag, create the GitHub Release
+      issues: write # release comment on resolved issues
+      pull-requests: write # release comment + `released` label on resolved PRs
+      id-token: write # OIDC token for RubyGems trusted publishing
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+
+      # Deliberately NOT `rubygems/release-gem`. That action runs `bundle exec rake release`,
+      # which refuses a dirty working tree and creates its own git tag — and here the tree is
+      # dirty on purpose and the tag already exists. This step is the OIDC half of what that
+      # action does; the gem build and push are semantic-release's `publishCmd`.
+      - name: Configure RubyGems credentials (OIDC trusted publishing)
+        uses: rubygems/configure-rubygems-credentials@v2.1.0
+
+      # One step does everything, and only when the commits actually warrant a release:
+      # `prepareCmd` writes version.rb in THIS runner's working copy (never committed —
+      # `@semantic-release/git` is deliberately absent), `publishCmd` builds and pushes the gem,
+      # and the tag plus GitHub Release come from semantic-release itself. Publishing from
+      # `publishCmd` rather than a following workflow step is what keeps a non-releasing push to
+      # `main` from trying to push the `0.0.0` placeholder. See .rules/RELEASE.md.
+      # The semantic-release major is pinned on purpose: this repo can sit untouched for
+      # months and an unpinned `npx` resolves @latest at run time. Dependabot cannot see
+      # this dependency — there is no manifest — so bumping it is a manual task.
+      - name: Release (semantic-release — tag, GitHub Release, gem push)
+        run: >-
+          npx --yes
+          -p semantic-release@24
+          -p @semantic-release/exec
+          semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

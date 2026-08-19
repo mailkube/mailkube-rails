@@ -1,0 +1,22 @@
+# Build output
+/pkg/
+/vendor/bundle/
+*.gem
+
+# Coverage
+/coverage/
+
+# Tooling caches
+.jscpd/
+.steep/
+.rubocop-cache/
+
+# Bundler resolves the lockfile per application; a gem does not ship one.
+Gemfile.lock
+
+# Local Bundler config. Never commit this: a stray `BUNDLE_WITHOUT: development`
+# here makes CI skip the lint and type gates and still report green.
+/.bundle/
+
+# Secrets / local config
+.env

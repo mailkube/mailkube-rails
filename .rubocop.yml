@@ -1,0 +1,84 @@
+plugins:
+  - rubocop-rspec
+
+AllCops:
+  TargetRubyVersion: 3.4
+  NewCops: disable # pinned tooling + explicit opt-in; a minor bump must never redden a green repo
+  SuggestExtensions: false # the extension set is pinned in the Gemfile, not discovered per-run
+  Exclude:
+    - "vendor/**/*"
+
+# ── KISS: the house complexity limits ─────────────────────────────────────────
+# These are the gates. RuboCop's own defaults are stricter than the org limit of 10, which would
+# quietly make Ruby the odd SDK out, so they are stated rather than inherited.
+Metrics/CyclomaticComplexity:
+  Max: 10
+Metrics/PerceivedComplexity:
+  Max: 10
+
+# ── Deliberate relaxations, each with a reason ────────────────────────────────
+# A verb takes one keyword argument per API field. That is the contract's requirement, it is
+# what makes a call fully readable at the call site, and it has a cyclomatic complexity of 1.
+# Counting keyword arguments as positional ones would fail the shape the contract asks for.
+Metrics/ParameterLists:
+  Max: 5
+  CountKeywordArgs: false
+
+# `Payload.build` is one hash literal followed by `compact`, mapping the message field by field.
+# It is long and flat: no branches, no nesting, nothing to extract that would not make it harder to
+# read. Cyclomatic complexity, gated above, is the metric that actually tracks understandability.
+Metrics/MethodLength:
+  Max: 25
+Metrics/AbcSize:
+  Max: 25
+
+# The models carry their documentation as YARD comments on the class, and the Data-subclass
+# bodies are one line each.
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*"
+
+Style/Documentation:
+  Enabled: true
+
+# Enabled here and NOT in the SDK's config, deliberately. The SDK gets away without it because its
+# public surface is small and every method carries YARD already; this gem's surface is mostly module
+# functions, which this cop is the only thing that covers. Without it the documentation pillar would
+# be declared in .rules/SOLID_DRY_KISS.md and enforced by nothing.
+Style/DocumentationMethod:
+  Enabled: true
+  RequireForNonPublicMethods: true
+
+# Double quotes everywhere, matching the other mailkube SDKs and the `frozen_string_literal`
+# idiom. RuboCop's default of single quotes would make interpolation a formatting decision.
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: double_quotes
+
+# ── Specs ─────────────────────────────────────────────────────────────────────
+# Specs are organised by the contract's concerns (config, send, errors, webhooks, concurrency),
+# not by mirroring `lib/`. That matches the python, node, Go and PHP suites file for file, which
+# is what makes a cross-SDK review possible, and it is why several describe a behaviour rather
+# than a class. Both cops encode the opposite convention.
+RSpec/SpecFilePathFormat:
+  Enabled: false
+RSpec/DescribeClass:
+  Enabled: false
+
+RSpec/ExampleLength:
+  Max: 15
+RSpec/MultipleExpectations:
+  Max: 5
+RSpec/NestedGroups:
+  Max: 4
+
+Layout/LineLength:
+  Max: 120
+
+# `#: Hash[String, String]` is an RBS inline annotation, not a malformed comment. Steep needs it on
+# every empty-collection literal it cannot infer (`Ruby::UnannotatedEmptyCollection`), so without
+# this the two gates contradict each other: satisfying Steep fails RuboCop, and writing `# :` to
+# satisfy RuboCop stops Steep reading the annotation at all.
+Layout/LeadingCommentSpace:
+  AllowRBSInlineAnnotation: true

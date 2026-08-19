@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  push:
+    # `develop` only, and `main` is absent on purpose. `develop` is the integration branch and is
+    # pushed to directly, so without this trigger a direct push would run nothing — `pull_request`
+    # alone does not cover it. `main` is covered instead by release.yml, which runs this whole
+    # workflow through `workflow_call` as its `ci-gate` job before releasing. Adding `main` here
+    # would put that gate run and a standalone push run in the same `ci-${{ github.ref }}`
+    # concurrency group, where one is cancelled — and the cancelled one is what the README's CI
+    # badge reports.
+    branches: [develop]
+  pull_request:
+  workflow_call: # so release.yml can gate on the full CI
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # Two axes, and they are genuinely independent. Ruby is this gem's own floor; Rails is the host
+    # framework, which can break an integration through a major it does not depend on directly. The
+    # matrix is read from the Gemfile's RAILS_VERSION switch rather than from generated gemfiles.
+    # See .rules/INTEGRATION_CONTRACT.md.
+    #
+    # Only the floor Ruby runs the full gate set: every dev gem is pinned exactly, so running
+    # rubocop and steep on a second Ruby would test the tooling's compatibility rather than this
+    # gem's. The newest Ruby is covered by `forward-compat`, which runs the specs alone.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rails: ["7.2", "8.0", "8.1"]
+    name: test (Rails ${{ matrix.rails }})
+    env:
+      RAILS_VERSION: ${{ matrix.rails }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Lint (rubocop — complexity, docs, style)
+        run: bundle exec rubocop
+
+      - name: Signatures are coherent (rbs validate)
+        run: bundle exec rake rbs
+
+      - name: Implementation matches the signatures (steep check)
+        run: bundle exec steep check
+
+      - name: Specs + coverage (line and branch, 90%)
+        run: bundle exec rspec
+
+  build:
+    # Publish readiness. The release builds the gem AFTER the tag and the GitHub Release already
+    # exist, so a gemspec that cannot build leaves a tagged version with nothing on the registry
+    # and semver forbids reusing the number. See .rules/CI_GATES.md.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Build the gem and assert what it ships
+        # The gem name is globbed rather than written out, so renaming the gem cannot leave this
+        # step pointing at a gemspec that no longer exists. There is exactly one.
+        #
+        # This asserts the OUTCOME rather than the configuration: `spec.files` is a Dir glob, and a
+        # glob that quietly starts matching `spec/` reads exactly like one that does not. The
+        # inverse matters just as much — a gem published without `sig/` type-checks nobody.
+        run: |
+          gem build ./*.gemspec
+          gem specification ./*.gem > /dev/null
+          gem contents --spec-file ./*.gemspec 2>/dev/null || true
+          tar -xOf ./*.gem data.tar.gz | tar -tzf - > contents.txt
+          cat contents.txt
+          if grep -Eq '^(spec|scripts|sig/vendor)/|^\.' contents.txt; then
+            echo "::error::the built gem ships development apparatus — check spec.files"
+            exit 1
+          fi
+          for required in lib/ sig/ LICENSE; do
+            grep -q "^${required}" contents.txt || { echo "::error::the gem is missing ${required}"; exit 1; }
+          done
+          rm -f ./*.gem
+
+  floor:
+    # The declared lower bounds are fiction until something resolves down to them: every `test` leg
+    # installs the NEWEST matching versions, so a floor that no longer works breaks exactly one
+    # person, the consumer whose resolver picks it. See .rules/CI_GATES.md.
+    #
+    # This gem HAS runtime dependencies (the SDK, railties, actionmailer), so unlike the
+    # zero-dependency SDK it wraps it does not get to skip this job. Bundler has no
+    # `--prefer-lowest`; the Gemfile realizes it by reading the floors out of the gemspec, which is
+    # the one place this gem declares them.
+    runs-on: ubuntu-latest
+    env:
+      DEPENDENCY_FLOOR: "1"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Show what resolved
+        run: bundle list
+
+      - name: Specs against the dependency floor
+        # No coverage gate here: this job answers "do the declared floors install and behave".
+        # Coverage is the `test` job's gate.
+        run: bundle exec rspec
+
+  forward-compat:
+    # The gem must also work on the newest Ruby, and that is a different claim from "the pinned
+    # tooling works there". Only the specs run here.
+    #
+    # `BUNDLE_WITHOUT` keeps the *claim* clean, and it is worth stating why, because it is easy to
+    # read as hygiene and drop. `bundler-cache: true` runs a full `bundle install` before any step
+    # here, and `Gemfile.lock` is gitignored so it resolves fresh every run. Without this, that
+    # install also builds `rubocop`, `rbs` and `steep` — pinned to exact versions, and pinned for
+    # the floor. A dev gem that failed to install on the newest Ruby would then turn this job red
+    # while saying nothing about the library, which is the one thing the job exists to test.
+    runs-on: ubuntu-latest
+    env:
+      BUNDLE_WITHOUT: development
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+
+      - name: Specs on the newest Ruby
+        run: bundle exec rspec
+
+  # There is deliberately no example-compilation job. This gem ships no `examples/`: every entry
+  # point it exposes needs a host Rails application before it can run, so runnable scripts would
+  # need one scaffolded first and would rot the moment it drifted. The wiring lives in README.md
+  # instead, and the specs are what keep it honest. See .rules/INTEGRATION_CONTRACT.md and
+  # .rules/CI_GATES.md.
+
+  dry:
+    # Language-agnostic duplication (DRY) gate — identical across every mailkube repo.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+      - name: Copy-paste detection (jscpd)
+        run: npx --yes jscpd@4 --config .jscpd.json .
+
+  docs:
+    # Governance gate: every .rules/*.md must be indexed in AGENTS.md.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Rule-index sync check
+        run: ./scripts/check-rule-index.sh

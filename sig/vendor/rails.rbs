@@ -1,0 +1,65 @@
+# Hand-written signatures for the slice of the framework this gem touches.
+#
+# ## Why this file exists
+#
+# There are no maintained RBS signatures for Rails, ActionMailer, ActionPack or `mail`, and
+# `gem_rbs_collection` does not carry them. Without declarations, `rbs validate` fails on the first
+# unknown constant (`::Rails::Railtie` as a superclass) and `steep check` cannot resolve any
+# framework call. Generating signatures with `rbs prototype rt` would produce tens of thousands of
+# lines of unmaintainable noise, most of it `untyped` anyway.
+#
+# ## What it deliberately is not
+#
+# **A slice, not a model of Rails.** It declares exactly the constants and methods `lib/` names, at
+# the shallowest fidelity that still type-checks. Framework objects this gem only passes through —
+# `Mail::Message`, the request, the config — stay `untyped` on purpose: pretending to model
+# `Mail::Message` would be a large second source of truth about somebody else's API, and it would
+# be wrong in ways nothing here could detect.
+#
+# So Steep is not checking the framework calls. What it IS checking, and what the gate is for, is
+# this gem's calls INTO THE SDK, which is fully typed and shipped with signatures — the argument
+# names and types the delivery method passes to `emails.send`, and what `Webhooks.verify` returns.
+# That is the boundary that breaks silently when the SDK moves, and it is the one under test.
+#
+# ## Not shipped
+#
+# The gemspec excludes `sig/vendor/` from `spec.files`. Publishing partial Rails signatures would
+# put them on the load path of anyone who types this gem, competing with whatever real signatures
+# they use, and RBS has no way to know theirs should win.
+module Rails
+  def self.application: () -> untyped
+
+  class Railtie
+    def self.config: () -> untyped
+    def self.initializer: (String, **untyped) ?{ (?untyped) -> void } -> void
+  end
+end
+
+module ActiveSupport
+  def self.on_load: (Symbol, **untyped) { (?untyped) [self: untyped] -> void } -> void
+
+  class OrderedOptions
+    def []: (Symbol) -> untyped
+    def []=: (Symbol, untyped) -> untyped
+    def method_missing: (Symbol, *untyped) -> untyped
+  end
+
+  module Notifications
+    def self.instrument: (String, ?Hash[Symbol, untyped]) ?{ (?untyped) -> void } -> untyped
+  end
+end
+
+module ActionController
+  class Base
+    def self.skip_forgery_protection: (**untyped) -> void
+
+    def request: () -> untyped
+    def head: (Symbol | Integer, **untyped) -> void
+  end
+end
+
+module Mail
+  class Address
+    def format: () -> String
+  end
+end

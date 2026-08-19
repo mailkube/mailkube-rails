@@ -1,0 +1,63 @@
+# Signatures for this gem's public surface.
+#
+# These are checked two ways, and both are needed:
+#   `rbs validate` proves the signatures are internally coherent (every type they name exists).
+#   `steep check`  proves the implementation matches them.
+# `rbs validate` alone never loads `lib/`, so it would happily pass a `sig/` describing methods
+# that do not exist, which is the exact drift this directory is here to prevent.
+#
+# The framework's own types are declared in `sig/vendor/`, which is NOT shipped in the gem. See
+# the gemspec, and `.rules/RAILS_INTEGRATION.md`.
+module Mailkube
+  module Rails
+    VERSION: String
+
+    class DeliveryError < StandardError
+    end
+
+    module Config
+      CLIENT_KEYS: Hash[Symbol, Symbol]
+
+      def self.build_client: (Hash[Symbol, untyped]?) -> Mailkube::Client
+      def self.client_kwargs: (Hash[Symbol, untyped]?) -> Hash[Symbol, untyped]
+      def self.user_agent_suffix: () -> String
+      def self.webhook_secret: (untyped) -> String?
+      def self.webhook_tolerance: (untyped) -> Integer?
+      def self.options: (untyped) -> untyped
+    end
+
+    module Payload
+      RESERVED_HEADERS: Array[String]
+
+      def self.build: (untyped) -> Hash[Symbol, untyped]
+      def self.addresses: (untyped, Symbol) -> Array[String]
+      def self.body_for: (untyped, String) -> String?
+      def self.transcode: (String, String?) -> String
+      def self.part_for: (untyped, String) -> untyped
+      def self.attachments: (untyped) -> Array[Mailkube::Attachment]
+      def self.custom_headers: (untyped) -> Hash[String, String]
+      def self.presence: (untyped) -> untyped
+    end
+
+    class DeliveryMethod
+      @client: Mailkube::Client?
+
+      attr_reader settings: Hash[Symbol, untyped]
+
+      def initialize: (?Hash[Symbol, untyped]?) -> void
+      def deliver!: (untyped) -> Mailkube::Email
+      def client: () -> Mailkube::Client
+    end
+
+    class Railtie < ::Rails::Railtie
+    end
+
+    class WebhooksController < ::ActionController::Base
+      NOTIFICATION: String
+
+      def create: () -> void
+      def tolerance_argument: () -> Hash[Symbol, Integer]
+      def header_hash: () -> Hash[String, String]
+    end
+  end
+end

@@ -1,0 +1,16 @@
+{
+  "branches": ["main"],
+  "tagFormat": "v${version}",
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "sed -i.bak -E 's/VERSION = \".*\"/VERSION = \"${nextRelease.version}\"/' lib/mailkube/rails/version.rb && rm -f lib/mailkube/rails/version.rb.bak",
+        "publishCmd": "gem build mailkube-rails.gemspec && gem push mailkube-rails-${nextRelease.version}.gem"
+      }
+    ],
+    "@semantic-release/github"
+  ]
+}
