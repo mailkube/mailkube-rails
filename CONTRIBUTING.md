@@ -66,7 +66,8 @@ so if updates go quiet, check that `develop` still exists before looking anywher
 ## Commit & PR conventions
 
 This project follows **[Conventional Commits](https://www.conventionalcommits.org/)**. A CI check
-enforces the **PR title** (PRs are **squash-merged** using it), and it drives releases: only
+named `PR-title` enforces the **PR title** (PRs are **squash-merged** using it), and it drives
+releases: only
 `feat:`, `fix:`, and `perf:` cut a new version. See [.rules/RELEASE.md](.rules/RELEASE.md).
 
 Suggested scopes: `delivery`, `webhooks`, `config`, `ci`, `deps`, `docs`.
