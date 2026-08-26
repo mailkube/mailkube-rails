@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   # a second copy is how a gem ends up reporting a version it is not, and this gem's version is
   # also what it puts in the User-Agent.
   spec.version = Mailkube::Rails::VERSION
-  spec.authors = ["Mailtactic, Corp."]
+  spec.authors = ["Mail Tactic Corporation"]
   spec.summary = "ActionMailer delivery method for mailkube."
   # Distinct from the summary on purpose: `gem build` warns when the two are identical, and
   # RubyGems renders them in different places.

@@ -45,7 +45,7 @@ end
 # new cops in a minor, Steep tightens inference in a minor, and both run as CI gates. Bump them
 # deliberately, in their own PR, with the failures fixed in the same change.
 group :development do
-  gem "rake", "13.3.1"
+  gem "rake", "13.4.2"
   gem "rbs", "4.1.3"
   gem "rubocop", "1.89.0"
   gem "rubocop-rspec", "3.10.2"
@@ -54,5 +54,5 @@ end
 
 group :test do
   gem "rspec", "3.13.2"
-  gem "simplecov", "1.1.0"
+  gem "simplecov", "1.1.1"
 end
