@@ -47,7 +47,7 @@ end
 group :development do
   gem "rake", "13.4.2"
   gem "rbs", "4.1.3"
-  gem "rubocop", "1.89.0"
+  gem "rubocop", "1.90.0"
   gem "rubocop-rspec", "3.10.2"
   gem "steep", "2.0.0"
 end
