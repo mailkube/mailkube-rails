@@ -64,7 +64,13 @@ Gem::Specification.new do |spec|
   # found both: `= 7.2` matches no published gem, and Rails 7.2.0 to 7.2.2 are permanently
   # uninstallable — `actionpack < 7.2.3` pins `rack < 3.2` while every published `rack-session`
   # now requires `rack >= 3.2`. A floor nobody can resolve is a promise this gem cannot keep.
+  #
+  # The `mailkube` floor is 1.2.1 for the same reason in its third form: installable, but broken.
+  # Every earlier release calls `JSON.parse` with a positional options hash, which json 3.0 made
+  # keyword-only, so each one raises `ArgumentError` on every webhook this gem parses as soon as
+  # json 3 resolves. The `floor` job is again what shows it, because it is the only leg that
+  # installs the oldest allowed `mailkube` rather than the newest.
   spec.add_dependency "actionmailer", ">= 7.2.3", "< 9"
-  spec.add_dependency "mailkube", ">= 1.1.0", "< 2"
+  spec.add_dependency "mailkube", ">= 1.2.1", "< 2"
   spec.add_dependency "railties", ">= 7.2.3", "< 9"
 end
