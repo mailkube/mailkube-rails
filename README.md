@@ -5,12 +5,14 @@
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Code of Conduct](https://img.shields.io/badge/Contributor%20Covenant-2.1-purple.svg)](CODE_OF_CONDUCT.md)
 
-ActionMailer delivery method for mailkube.
+ActionMailer delivery method for [mailkube](https://mailkube.com).
 
 Send mail through mailkube using ActionMailer exactly as you already do, and receive webhooks as
 `ActiveSupport::Notifications`. This gem is a thin adapter over the
 [`mailkube`](https://rubygems.org/gems/mailkube) gem: the API, retries,
 errors and signature verification all live there.
+
+Full product and API documentation: [docs.mailkube.com/sdks/rails](https://docs.mailkube.com/sdks/rails).
 
 Requires Ruby 3.4+ and Rails 7.2.3+.
 
