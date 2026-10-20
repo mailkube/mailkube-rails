@@ -181,7 +181,7 @@ longer covers the bytes that were signed.
 Before adding a setting, a mapped field, or another entry point, read
 [`.rules/INTEGRATION_CONTRACT.md`](.rules/INTEGRATION_CONTRACT.md) (what every mailkube framework
 integration does identically) and [`.rules/RAILS_INTEGRATION.md`](.rules/RAILS_INTEGRATION.md)
-(how those rules land here). Both carry a checklist.
+(how those rules land here). The contract ends with the checklist for exposing a new SDK capability.
 
 The short version: the capability has to exist in the SDK first, inputs are mapped in `payload.rb`
 and never at a call site, and configuration goes through `config.rb`.

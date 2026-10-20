@@ -82,13 +82,11 @@ module Mailkube
 
       # Convert the Rack environment into the plain Hash the SDK reads headers from.
       #
-      # **`request.headers` cannot be passed through**, which is worth stating because it is the
-      # obvious thing to write and it fails twice over. `ActionDispatch::Http::Headers` includes
-      # `Enumerable` and nothing else, so it has no `transform_keys` and the SDK's normalization
-      # raises `NoMethodError` on it. And its `each` delegates to the Rack environment, so
-      # converting it to a Hash yields `HTTP_X_WEBHOOK_ID` rather than `X-Webhook-Id` — which
-      # downcases to something the SDK's lookup will never match, turning every delivery into a
-      # signature failure with no clue as to why.
+      # The SDK would also take `request.headers` as it is. `ActionDispatch::Http::Headers` is
+      # `Enumerable` rather than a Hash and yields CGI env names (`HTTP_X_WEBHOOK_ID`), and the
+      # SDK's normalization iterates any such mapping and strips the `HTTP_` prefix, in every
+      # `mailkube` release this gem allows. The conversion here passes the request headers only,
+      # never the rest of the Rack environment.
       #
       # The conversion is generic rather than a list of the three headers the SDK reads today.
       # Naming them would put a copy of the signature scheme's header set in this repository, and
