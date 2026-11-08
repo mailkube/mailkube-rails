@@ -116,16 +116,16 @@ constraints and the middleware themselves.
 ActionController. That is also why `actionpack` is not a gemspec dependency: every Rails application
 that can route a request already has it.
 
-Three details in that controller are each a bug if changed:
+That controller holds three details, and the first and the third are each a bug if changed:
 
 1. **`request.raw_post`, not `request.body.read`.** `raw_post` caches into `RAW_POST_DATA` and stays
    readable; `body.read` leaves the IO at EOF, so a later `params` access sees an empty body.
-2. **The header hash is built from the Rack environment, generically.** `request.headers` cannot be
-   passed to the SDK: `ActionDispatch::Http::Headers` includes only `Enumerable`, so it has no
-   `transform_keys` and the SDK's normalization raises `NoMethodError` on it — and its `each`
-   delegates to the Rack environment, so converting it yields `HTTP_X_WEBHOOK_ID`, which downcases
-   to something the SDK's lookup never matches. Naming the three headers explicitly would be a copy
-   of the signature scheme's header set living here, so the conversion is generic instead.
+2. **The header hash is built from the Rack environment, generically.** It holds the `HTTP_*`
+   entries only, renamed to `x-webhook-id` form. The SDK would also accept `request.headers`
+   directly: `ActionDispatch::Http::Headers` is `Enumerable` and yields CGI env names, and the SDK's
+   normalization iterates any mapping and strips the `HTTP_` prefix, in every `mailkube` release
+   this gem allows. Naming the three headers explicitly would be a copy of the signature scheme's
+   header set living here, so the conversion is generic instead.
 3. **A missing secret answers 500, not 4xx.** The sender is behaving correctly and the fault is
    entirely local, so it must read as an outage and the platform must keep retrying. A 4xx would
    make the platform discard deliveries that arrive while the secret is unset.
